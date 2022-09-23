@@ -1,4 +1,7 @@
 import sys
+sys.path.append(r"/root/work/cjutils/cjutils")
+#######################>>> auto import from cmd_base <<<########################
+import sys
 sys.path.append(r"/root/work/yutils/cjutils")
 #######################>>> auto import from cmd_base <<<########################
 import sys

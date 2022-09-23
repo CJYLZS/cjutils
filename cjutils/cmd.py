@@ -146,6 +146,7 @@ class cmd_base():
             self.print_help()
 
     def init_ext_file(self, ext_file):
+        # after pip install not need add extra search path
         content = f'import sys\nsys.path.append(r"{self.cmd_dir}")\n{">>> auto import from cmd_base <<<":#^80}\n'
         with open(ext_file, 'r+') as f:
             d = f.read(1024)
@@ -160,14 +161,14 @@ class cmd_base():
             target = self.get_opt('h')
             sys.argv.remove(target)
             ext_mod = f"{target + '_ext'}"
-            self.init_ext_file(pjoin(self.cmds_dir, ext_mod + ".py"))
+            # self.init_ext_file(pjoin(self.cmds_dir, ext_mod + ".py"))
             ext = __import__(ext_mod)
             ext.cmd().main()
         elif len(self.sys_targets) > 0:
             target = self.sys_targets[0]
             sys.argv.remove(target)
             ext_mod = f"{target + '_ext'}"
-            self.init_ext_file(pjoin(self.cmds_dir, ext_mod + ".py"))
+            # self.init_ext_file(pjoin(self.cmds_dir, ext_mod + ".py"))
             ext = __import__(ext_mod)
             ext.cmd().main()
         else:
@@ -211,7 +212,7 @@ class cmd(cmd_base):
         target = targets[0]
         sys.argv.remove(target)
         ext_mod = f"{target + '_ext'}"
-        self.init_ext_file(pjoin(self.cmds_dir, ext_mod + ".py"))
+        # self.init_ext_file(pjoin(self.cmds_dir, ext_mod + ".py"))
         ext = __import__(ext_mod)
         sys.exit(ext.cmd().main())
 
