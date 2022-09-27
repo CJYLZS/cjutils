@@ -5,15 +5,23 @@ from utils import *
 
 
 class cmd_base():
-    opt_args = {
-        "help": ("h", "help", "print help", "", False),
-    }
-    opt_short_args = {
-        "h": ("h", "help", "print help", "", False),
-    }
-    sys_args = {}
-    sys_short_args = {}
-    sys_targets = []
+    __cmd_plugin_example = \
+        '''
+from cjutils.cmd import *
+
+
+class cmd(cmd_base):
+    def __init__(self, options_argv=..., brief_intro="", enable_plugins=True) -> None:
+        super().__init__([
+            ('a', 'along', 'args a', False, False),
+            ('b', 'blong', 'args b', -1, False),
+            ('c', 'clong', 'args c', "", False),
+        ], brief_intro="an example plugin", enable_plugins=False)
+
+    def main(self):
+
+        return 0
+'''
 
     def __get_arg_short(self, arg):
         return arg[0]
@@ -36,16 +44,37 @@ class cmd_base():
     def __is_short_name(self, name):
         return len(name) == 1
 
+    def __write_example_plugin(self):
+        if not pexist(self.plugins_dir):
+            os.makedirs(self.plugins_dir)
+
+        with open(pjoin(self.plugins_dir, 'example_ext.py'), 'w') as f:
+            f.write(self.__cmd_plugin_example)
+
+        sys.exit(0)
+
+    def __init_vars(self):
+        self.sys_args = {}
+        self.sys_short_args = {}
+        self.sys_targets = []
+        self.opt_args = {
+            "help": ("h", "help", "print help", False, False),
+            "example": ("", "example", "create a example plugin into ./cmds/", False, False),
+        }
+        self.opt_short_args = {}
+
     def __init_dirs(self):
-        self.root_dir = os.path.realpath(".")
+        self.exec_dir = os.path.realpath(".")
+        self.file_dir = os.path.realpath(dirname(sys.argv[0]))
         self.cmd_dir = os.path.realpath(dirname(__file__))
-        self.cmds_dir = pjoin(self.root_dir, 'cmds')
-        if not pexist(self.cmds_dir):
-            err('not cmds found in current dir')
-            raise FileNotFoundError
-        sys.path.append(self.cmds_dir)
+        self.plugins_dir = pjoin(self.exec_dir, 'cmds')
+        if pexist(self.plugins_dir):
+            sys.path.append(self.plugins_dir)
 
     def __init_opt_args(self, options_argv):
+        for _, arg in self.opt_args.items():
+            self.opt_short_args[self.__get_arg_short(arg)] = arg
+
         for arg in options_argv:
             assert len(
                 arg) == 5, "argv: ([short opt],  [long opt], [help info], [default value], [required])"
@@ -92,6 +121,7 @@ class cmd_base():
         i = 1
         while i < len(sys.argv):
             arg = sys.argv[i]
+            sys.argv.remove(arg)
             if arg.startswith('--'):
                 opt = arg[2:]
                 if opt in self.opt_args:
@@ -123,30 +153,78 @@ class cmd_base():
 
     def __print_help(self):
         help_info = green("\nylzs cmd frame v0.1\n\n")
-        help_info += yellow(self.brief_intro + '\n\n')
+        help_info += yellow(f"{'usage:': <8}") + '... [plugin] [options] [targets]\n'
+        help_info += yellow(f"{'intro:': <8}") + self.brief_intro + '\n\n'
+        if self.__enable_plugins and pexist(self.plugins_dir):
+            tmp = ''
+            flag = '_ext.py'
+            count = 0
+            for plugin in os.listdir(self.plugins_dir):
+                if plugin.endswith(flag):
+                    ext_name = plugin[:len(flag)]
+                    if ext_name == 0:
+                        continue
+                    ext = __import__(plugin[:plugin.rfind('.')])
+                    tmp += f'{ext_name: <20} {ext.cmd().get_help()}\n'
+                    count += 1
+            if count > 0:
+                help_info += f'{green("plugins:")}\n\n{tmp}\n'
+
         args = set()
         for _, val in self.opt_short_args.items():
             args.add(val)
         for _, val in self.opt_args.items():
             args.add(val)
+        args = sorted(args)
+        help_info += green('options:\n\n')
         for arg in args:
+            val_type = type(self.__get_arg_default_value(arg)).__name__
             required = 'required' if self.__get_arg_required(
                 arg) else 'optional'
-            help_info += f'{"-"+self.__get_arg_short(arg): <4}{"--"+self.__get_arg_long(arg): <10}{self.__get_arg_help(arg): <20}{required}\n'
+            if len(self.__get_arg_short(arg)) > 0:
+                arg_short_help = f'{"-"+self.__get_arg_short(arg): <4}'
+            else:
+                arg_short_help = f'{"": <4}'
+            help_info += f'{arg_short_help}{"--"+self.__get_arg_long(arg): <20}{self.__get_arg_help(arg): <50}{val_type: <10}{required}\n'
         print(help_info)
+        sys.exit(0)
 
-    def __init__(self, options_argv=[], brief_intro="", in_main_cmd=False) -> None:
-        self.__in_main_cmd = in_main_cmd
+    def __skip_into_plugin(self):
+        if len(sys.argv) < 2 or sys.argv[1].startswith('-'):
+            # no plugin need to load
+            return
+
+        plugin_name = sys.argv[1] + '_ext'
+        plugin_file_name = pjoin(self.plugins_dir, plugin_name + '.py')
+        if not pexist(plugin_file_name):
+            err(os.path.realpath(plugin_file_name), 'is not exist')
+            sys.exit(-1)
+        sys.argv.remove(sys.argv[1])
+        ext = __import__(plugin_name)
+        sys.exit(ext.cmd().main())
+
+    def __enabled(self, short_name="", long_name=""):
+        assert short_name in self.opt_short_args or long_name in self.opt_args, f"in __enabled: {short_name} and {long_name} not exist"
+        res = short_name in self.sys_short_args or long_name in self.sys_args
+        return res
+
+    def __init__(self, options_argv=[], brief_intro="", enable_plugins=True) -> None:
         self.brief_intro = brief_intro
+        self.__enable_plugins = enable_plugins
+        self.__init_vars()
         self.__init_dirs()
+        if enable_plugins:
+            self.__skip_into_plugin()
         self.__init_opt_args(options_argv)
         self.__init_sys_argv()
-        self.__check_required()
-        if 'h' in self.sys_short_args.keys() or 'help' in self.sys_args.keys():
+        if self.__enabled('h', 'help'):
             self.print_help()
+        elif self.__enabled('', 'create_example'):
+            self.__write_example_plugin()
+        self.__check_required()
 
     def init_ext_file(self, ext_file):
-        # after pip install not need add extra search path
+        # if this module is installed over pip, then don't need add extra search path into plugin_ext.py
         content = f'import sys\nsys.path.append(r"{self.cmd_dir}")\n{">>> auto import from cmd_base <<<":#^80}\n'
         with open(ext_file, 'r+') as f:
             d = f.read(1024)
@@ -157,23 +235,7 @@ class cmd_base():
             f.write(d)
 
     def print_help(self):
-        if self.get_opt('h'):
-            target = self.get_opt('h')
-            sys.argv.remove(target)
-            ext_mod = f"{target + '_ext'}"
-            # self.init_ext_file(pjoin(self.cmds_dir, ext_mod + ".py"))
-            ext = __import__(ext_mod)
-            ext.cmd().main()
-        elif len(self.sys_targets) > 0:
-            target = self.sys_targets[0]
-            sys.argv.remove(target)
-            ext_mod = f"{target + '_ext'}"
-            # self.init_ext_file(pjoin(self.cmds_dir, ext_mod + ".py"))
-            ext = __import__(ext_mod)
-            ext.cmd().main()
-        else:
-            self.__print_help()
-        sys.exit(0)
+        self.__print_help()
 
     def get_opt(self, opt: str):
         if self.__is_short_name(opt):
@@ -197,25 +259,5 @@ class cmd_base():
     def get_targets(self):
         return self.sys_targets
 
-
-class cmd(cmd_base):
-    def __init__(self) -> None:
-        super().__init__(
-            brief_intro="main cmd run with target",
-            in_main_cmd=True
-        )
-
-    def main(self):
-        targets = self.get_targets()
-        if len(targets) == 0:
-            self.print_help()
-        target = targets[0]
-        sys.argv.remove(target)
-        ext_mod = f"{target + '_ext'}"
-        # self.init_ext_file(pjoin(self.cmds_dir, ext_mod + ".py"))
-        ext = __import__(ext_mod)
-        sys.exit(ext.cmd().main())
-
-
-if __name__ == "__main__":
-    cmd().main()
+    def get_help(self):
+        return self.brief_intro

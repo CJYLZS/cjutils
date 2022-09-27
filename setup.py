@@ -7,9 +7,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='cjutils',
-    version='0.0.5',
+    version='0.0.8',
     keywords='cjutils',
-    description='utils and cmd framework',
+    description='cmd framework and utils',
     license='MIT License',
     url='https://github.com/CJYLZS/cjutils.git',
     author='cjylzs',
