@@ -1,3 +1,3 @@
-[submodule "cjtools"]
-	path = cjtools
-	url = https://github.com/CJYLZS/cjtools.git
+[submodule "cjutools"]
+	path = cjutools
+	url = https://github.com/CJYLZS/cjutools.git
