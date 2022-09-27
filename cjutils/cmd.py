@@ -1,6 +1,5 @@
 import os
 import sys
-from tkinter.messagebox import NO
 sys.path.append(os.path.realpath(os.path.dirname(__file__)))
 from utils import *
 
