@@ -1,5 +1,6 @@
 import os
 import sys
+from tkinter.messagebox import NO
 sys.path.append(os.path.realpath(os.path.dirname(__file__)))
 from utils import *
 
@@ -63,11 +64,16 @@ class cmd(cmd_base):
         }
         self.opt_short_args = {}
 
-    def __init_dirs(self):
+    def __init_dirs(self, plugin_dir):
+        if plugin_dir is not None and pexist(plugin_dir):
+            self.plugins_dir = plugin_dir
+        else:
+            self.plugins_dir = None
         self.exec_dir = os.path.realpath(".")
         self.file_dir = os.path.realpath(dirname(sys.argv[0]))
         self.cmd_dir = os.path.realpath(dirname(__file__))
-        self.plugins_dir = pjoin(self.exec_dir, 'cmds')
+        if self.plugins_dir is None:
+            self.plugins_dir = pjoin(self.exec_dir, 'cmds')
         if pexist(self.plugins_dir):
             sys.path.append(self.plugins_dir)
 
@@ -204,11 +210,11 @@ class cmd(cmd_base):
         res = short_name in self.sys_short_args or long_name in self.sys_args
         return res
 
-    def __init__(self, options_argv=[], brief_intro="", enable_plugins=True) -> None:
+    def __init__(self, options_argv=[], brief_intro="", enable_plugins=True, plugin_dir=None) -> None:
         self.brief_intro = brief_intro
         self.__enable_plugins = enable_plugins
         self.__init_vars()
-        self.__init_dirs()
+        self.__init_dirs(plugin_dir)
         if enable_plugins:
             self.__skip_into_plugin()
         self.__init_opt_args(options_argv)
