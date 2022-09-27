@@ -121,22 +121,17 @@ class cmd(cmd_base):
         i = 1
         while i < len(sys.argv):
             arg = sys.argv[i]
-            sys.argv.remove(arg)
             if arg.startswith('--'):
                 opt = arg[2:]
                 if opt in self.opt_args:
                     arg = self.opt_args[opt]
                     i = solve_arg(arg, i)
-                elif not self.__in_main_cmd:
-                    assert False, f'{arg} not exist'
             elif arg.startswith('-'):
                 opt = arg[1:]
                 for o in opt:
                     if o in self.opt_short_args:
                         arg = self.opt_short_args[o]
                         i = solve_arg(arg, i)
-                    elif not self.__in_main_cmd:
-                        assert False, f'-{o} not exist'
             else:
                 self.sys_targets.append(arg)
             i += 1
@@ -153,7 +148,8 @@ class cmd(cmd_base):
 
     def __print_help(self):
         help_info = green("\nylzs cmd frame v0.1\n\n")
-        help_info += yellow(f"{'usage:': <8}") + '... [plugin] [options] [targets]\n'
+        help_info += yellow(f"{'usage:': <8}") + \
+            '... [plugin] [options] [targets]\n'
         help_info += yellow(f"{'intro:': <8}") + self.brief_intro + '\n\n'
         if self.__enable_plugins and pexist(self.plugins_dir):
             tmp = ''
@@ -161,7 +157,7 @@ class cmd(cmd_base):
             count = 0
             for plugin in os.listdir(self.plugins_dir):
                 if plugin.endswith(flag):
-                    ext_name = plugin[:len(flag)]
+                    ext_name = plugin[:-len(flag)]
                     if ext_name == 0:
                         continue
                     ext = __import__(plugin[:plugin.rfind('.')])
@@ -185,7 +181,7 @@ class cmd(cmd_base):
                 arg_short_help = f'{"-"+self.__get_arg_short(arg): <4}'
             else:
                 arg_short_help = f'{"": <4}'
-            help_info += f'{arg_short_help}{"--"+self.__get_arg_long(arg): <20}{self.__get_arg_help(arg): <50}{val_type: <10}{required}\n'
+            help_info += f'{arg_short_help}{"--"+self.__get_arg_long(arg): <20}{self.__get_arg_help(arg): <80}{val_type: <10}{required}\n'
         print(help_info)
         sys.exit(0)
 
@@ -235,6 +231,10 @@ class cmd(cmd_base):
             f.write(d)
 
     def print_help(self):
+        if '-h' in sys.argv:
+            sys.argv.remove('-h')
+        if '--help' in sys.argv:
+            sys.argv.remove('--help')
         self.__print_help()
 
     def get_opt(self, opt: str):

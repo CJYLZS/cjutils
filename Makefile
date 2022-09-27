@@ -12,3 +12,5 @@ upload:
 
 clean:
 	rm -rf build cjutils.egg-info dist
+
+all: clean build remove install

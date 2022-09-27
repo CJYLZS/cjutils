@@ -242,6 +242,23 @@ def check_file(file_name, package_name):
             exit(-1)
 
 
+def get_pip():
+    if is_windows():
+        return 'python -m pip'
+    return f'{python()} -m pip'
+
+
+def import_module(mod, mod_name=None):
+    if mod_name is None:
+        mod_name = mod
+    try:
+        __import__(mod)
+    except ModuleNotFoundError:
+        warn(f'{mod} not found try to install {mod_name}')
+        runok(f'{get_pip()} install {mod_name}')
+    return __import__(mod)
+
+
 def clone(url, depth=1, dst_dir='.'):
     dst_dir = dst_dir.replace('~', home())
     if dst_dir != '.' and pexist(dst_dir):
@@ -342,3 +359,16 @@ def retry(func, times=5, interval=3):
 
 def dump_json(d: dict):
     return '\n' + json.dumps(d, indent=4, separators=',:', ensure_ascii=True)
+
+
+####################################################---use site-packages utils---####################################################
+
+
+def get_clipboard():
+    pyperclip = import_module('pyperclip')
+    return pyperclip.paste()
+
+
+def set_clipboard(_str):
+    pyperclip = import_module('pyperclip')
+    pyperclip.copy(_str)
