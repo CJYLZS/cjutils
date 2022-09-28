@@ -207,7 +207,7 @@ def runok(cmd) -> tuple:
     if code != 0:
         err(code, output)
         assert code == 0, f'{cmd} failed'
-    return code, output
+    return output
 
 
 def pexist(path):
@@ -344,7 +344,7 @@ def repo_root_dir(path):
 
 def list_all_file(dir):
     for tmp in os.listdir(dir):
-        if os.path.isdir(os.path.join(dir, tmp)):
+        if not os.path.isdir(os.path.join(dir, tmp)):
             yield os.path.join(dir, tmp)
         else:
             yield from list_all_file(os.path.join(dir, tmp))
@@ -368,8 +368,10 @@ def retry(func, times=5, interval=3):
 def dump_json(d: dict):
     return '\n' + json.dumps(d, indent=4, separators=',:', ensure_ascii=True)
 
+
 def get_env(key):
     return os.environ.get(key, None)
+
 
 def set_env(key, val="1", overwrite=True):
     if not overwrite:

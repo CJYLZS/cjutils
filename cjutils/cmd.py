@@ -260,6 +260,21 @@ class cmd(cmd_base):
             err(f'unknown opt {opt}')
             assert False, 'cmd_base get_opt failed'
 
+    def sys_has_opt(self, opt: str):
+        if self.__is_short_name(opt):
+            if opt not in self.opt_short_args.keys():
+                err(f'unknown opt -{opt}')
+                assert False, 'cmd_base sys_has_opt failed'
+            return opt in self.sys_short_args
+        elif self.__is_long_name(opt):
+            if opt not in self.opt_args.keys():
+                err(f'unknown opt --{opt}')
+                assert False, 'cmd_base sys_has_opt failed'
+            return opt in self.sys_args
+        else:
+            err(f'unknown opt {opt}')
+            assert False, 'cmd_base sys_has_opt failed'
+
     def get_targets(self):
         return self.sys_targets
 
