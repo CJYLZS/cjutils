@@ -211,6 +211,8 @@ class cmd(cmd_base):
 
     def __init__(self, options_argv=[], brief_intro="", enable_plugins=True, plugin_dir=None) -> None:
         self.brief_intro = brief_intro
+        if get_env("CMD_BASE_GET_HELP"):
+            return
         self.__enable_plugins = enable_plugins
         self.__init_vars()
         self.__init_dirs(plugin_dir)
@@ -218,7 +220,7 @@ class cmd(cmd_base):
             self.__skip_into_plugin()
         self.__init_opt_args(options_argv)
         self.__init_sys_argv()
-        if self.__enabled('h', 'help'):
+        if self.__enabled('h', 'help') or len(sys.argv) == 1:
             self.print_help()
         elif self.__enabled('', 'create_example'):
             self.__write_example_plugin()
@@ -236,10 +238,7 @@ class cmd(cmd_base):
             f.write(d)
 
     def print_help(self):
-        if '-h' in sys.argv:
-            sys.argv.remove('-h')
-        if '--help' in sys.argv:
-            sys.argv.remove('--help')
+        set_env("CMD_BASE_GET_HELP")
         self.__print_help()
 
     def get_opt(self, opt: str):
@@ -248,14 +247,14 @@ class cmd(cmd_base):
                 err(f'unknown opt -{opt}')
                 assert False, 'cmd_base get_opt failed'
             if opt not in self.sys_short_args.keys():
-                return False
+                return self.__get_arg_default_value(self.opt_short_args[opt])
             return self.sys_short_args[opt]
         elif self.__is_long_name(opt):
             if opt not in self.opt_args.keys():
                 err(f'unknown opt --{opt}')
                 assert False, 'cmd_base get_opt failed'
             if opt not in self.sys_args.keys():
-                return False
+                return self.__get_arg_default_value(self.opt_args[opt])
             return self.sys_args[opt]
         else:
             err(f'unknown opt {opt}')

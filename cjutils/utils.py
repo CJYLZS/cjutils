@@ -342,6 +342,14 @@ def repo_root_dir(path):
     assert False, f'{path} not in git repo'
 
 
+def list_all_file(dir):
+    for tmp in os.listdir(dir):
+        if os.path.isdir(os.path.join(dir, tmp)):
+            yield os.path.join(dir, tmp)
+        else:
+            yield from list_all_file(os.path.join(dir, tmp))
+
+
 def retry(func, times=5, interval=3):
     res = None
     for t in range(1, times + 1):
@@ -359,6 +367,15 @@ def retry(func, times=5, interval=3):
 
 def dump_json(d: dict):
     return '\n' + json.dumps(d, indent=4, separators=',:', ensure_ascii=True)
+
+def get_env(key):
+    return os.environ.get(key, None)
+
+def set_env(key, val="1", overwrite=True):
+    if not overwrite:
+        assert key not in os.environ, f"{key} exist in environment val is {os.environ[key]} should overwrite?"
+    os.environ[key] = str(val)
+    return os.environ[key]
 
 
 ####################################################---use site-packages utils---####################################################
