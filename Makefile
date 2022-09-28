@@ -13,4 +13,7 @@ upload:
 clean:
 	rm -rf build cjutils.egg-info dist
 
-all: clean build remove install
+format:
+	python3 -m cjutools format -Pi
+
+all: clean format build remove install
