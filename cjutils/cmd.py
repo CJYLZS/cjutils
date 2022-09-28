@@ -128,15 +128,15 @@ class cmd(cmd_base):
             arg = sys.argv[i]
             if arg.startswith('--'):
                 opt = arg[2:]
-                if opt in self.opt_args:
-                    arg = self.opt_args[opt]
-                    i = solve_arg(arg, i)
+                assert opt in self.opt_args, f'unknown opt: {opt}'
+                arg = self.opt_args[opt]
+                i = solve_arg(arg, i)
             elif arg.startswith('-'):
                 opt = arg[1:]
                 for o in opt:
-                    if o in self.opt_short_args:
-                        arg = self.opt_short_args[o]
-                        i = solve_arg(arg, i)
+                    assert o in self.opt_short_args, f'unknown opt: {opt}'
+                    arg = self.opt_short_args[o]
+                    i = solve_arg(arg, i)
             else:
                 self.sys_targets.append(arg)
             i += 1
@@ -166,7 +166,7 @@ class cmd(cmd_base):
                     if ext_name == 0:
                         continue
                     ext = __import__(plugin[:plugin.rfind('.')])
-                    tmp += f'{ext_name: <20} {ext.cmd().get_help()}\n'
+                    tmp += f'{ext_name: <24}{ext.cmd().get_help()}\n'
                     count += 1
             if count > 0:
                 help_info += f'{green("plugins:")}\n\n{tmp}\n'
@@ -180,13 +180,13 @@ class cmd(cmd_base):
         help_info += green('options:\n\n')
         for arg in args:
             val_type = type(self.__get_arg_default_value(arg)).__name__
-            required = 'required' if self.__get_arg_required(
-                arg) else 'optional'
+            required = red('required') if self.__get_arg_required(
+                arg) else green('optional')
             if len(self.__get_arg_short(arg)) > 0:
                 arg_short_help = f'{"-"+self.__get_arg_short(arg): <4}'
             else:
                 arg_short_help = f'{"": <4}'
-            help_info += f'{arg_short_help}{"--"+self.__get_arg_long(arg): <20}{self.__get_arg_help(arg): <80}{val_type: <10}{required}\n'
+            help_info += f'{arg_short_help}{"--"+self.__get_arg_long(arg): <20}{self.__get_arg_help(arg): <60}{val_type: <10}{required}\n'
         print(help_info)
         sys.exit(0)
 

@@ -5,17 +5,19 @@
 
 from setuptools import setup, find_packages
 
-setup(
-    name='cjutils',
-    version='0.0.12',
-    keywords='cjutils',
-    description='cmd framework and utils',
-    license='MIT License',
-    url='https://github.com/CJYLZS/cjutils.git',
-    author='cjylzs',
-    author_email='691086891@qq.com',
-    packages=find_packages(),
-    include_package_data=True,
-    platforms='any',
-    install_requires=[]
-)
+with open('README.rst') as f:
+    setup(
+        name='cjutils',
+        version='0.0.13',
+        keywords='cjutils',
+        description='cmd framework and utils',
+        long_description=f.read(),
+        license='MIT License',
+        url='https://github.com/CJYLZS/cjutils.git',
+        author='cjylzs',
+        author_email='691086891@qq.com',
+        packages=find_packages(),
+        include_package_data=True,
+        platforms='any',
+        install_requires=[]
+    )
