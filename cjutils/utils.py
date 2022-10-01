@@ -287,15 +287,35 @@ def lns(source, dest):
     runok(f'ln -s {source} {dest}')
 
 
-def backup(source):
+def sort_by_mtime(files: list):
+    sorted(files, key=lambda f: os.stat(f).st_ctime)
+
+
+def backup(source, max_count=5):
     if not pexist(source):
         return
+    *backup_name, _type = source.split('.')
+    backup_name = '.'.join(backup_name)
+    backup_files = []
+    full = True
+    for i in range(1, max_count + 1):
+        new_name = backup_name + f'_{i}.{_type}'
+        if not pexist(new_name):
+            backup_name = new_name
+            full = False
+            break
+        backup_files.append(new_name)
+    if full:
+        sort_by_mtime(backup_files)
+        rm(backup_files[0])
+        backup_name = backup_files[0]
+
     source = source.replace('~', home())
     if is_windows():
         cmd = 'move'
     else:
         cmd = 'mv'
-    runok(f'{cmd} {source} {source}.bak')
+    runok(f'{cmd} {source} {backup_name}')
 
 
 def curdir():
