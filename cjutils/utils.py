@@ -288,7 +288,7 @@ def lns(source, dest):
 
 
 def sort_by_mtime(files: list):
-    sorted(files, key=lambda f: os.stat(f).st_ctime)
+    return sorted(files, key=lambda f: os.stat(f).st_ctime)
 
 
 def backup(source, max_count=5):
@@ -306,7 +306,7 @@ def backup(source, max_count=5):
             break
         backup_files.append(new_name)
     if full:
-        sort_by_mtime(backup_files)
+        backup_files = sort_by_mtime(backup_files)
         rm(backup_files[0])
         backup_name = backup_files[0]
 
