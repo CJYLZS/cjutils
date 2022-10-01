@@ -209,7 +209,7 @@ class cmd(cmd_base):
         res = short_name in self.sys_short_args or long_name in self.sys_args
         return res
 
-    def __init__(self, options_argv=[], brief_intro="", enable_plugins=True, plugin_dir=None) -> None:
+    def __init__(self, options_argv=[], brief_intro="", enable_plugins=True, plugin_dir=None, enable_empty_options=True) -> None:
         self.brief_intro = brief_intro
         if get_env("CMD_BASE_GET_HELP"):
             return
@@ -220,7 +220,7 @@ class cmd(cmd_base):
             self.__skip_into_plugin()
         self.__init_opt_args(options_argv)
         self.__init_sys_argv()
-        if self.__enabled('h', 'help') or len(sys.argv) == 1:
+        if self.__enabled('h', 'help') or (len(sys.argv) == 1 and not enable_empty_options):
             self.print_help()
         elif self.__enabled('', 'create_example'):
             self.__write_example_plugin()

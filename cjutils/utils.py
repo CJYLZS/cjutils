@@ -182,6 +182,7 @@ def __run(cmd):
 
 
 def sys_run(cmd):
+    info(cmd)
     os.system(cmd)
 
 
