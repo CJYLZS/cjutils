@@ -169,6 +169,10 @@ def is_windows():
     return sys.platform == 'win32'
 
 
+def is_docker():
+    return pexist('/.dockerenv')
+
+
 def python():
     if is_windows():
         return 'python'
@@ -227,7 +231,12 @@ def me():
     return os.environ["USER"]
 
 
-def check_file(file_name, package_name):
+def check_file(file_name):
+    code, _ = runex(f'which {file_name}')
+    return code == 0
+
+
+def check_pkg(file_name, package_name):
     code, output = runex(f'which {file_name}')
     if code != 0:
         warn(f'not found {file_name}, try to install {package_name}')
@@ -282,8 +291,11 @@ def lns(source, dest, safe=True):
     # dest -> source
     assert pexist(source), f'{source} not exist'
     dest = dest.replace('~', home())
-    if pexist(dest) and safe:
-        backup(dest)
+    if pexist(dest):
+        if safe:
+            backup(dest)
+        else:
+            rm(dest)
     source = os.path.realpath(source)
     runok(f'ln -s {source} {dest}')
 
@@ -296,11 +308,18 @@ def backup(source, max_count=5):
     if not pexist(source):
         return
     *backup_name, _type = source.split('.')
-    backup_name = '.'.join(backup_name)
+    if len(backup_name) == 0:
+        backup_name = _type
+        _type = None
+    else:
+        backup_name = '.'.join(backup_name)
     backup_files = []
     full = True
     for i in range(1, max_count + 1):
-        new_name = backup_name + f'_{i}.{_type}'
+        if _type is None:
+            new_name = backup_name + f'_{i}'
+        else:
+            new_name = backup_name + f'_{i}.{_type}'
         if not pexist(new_name):
             backup_name = new_name
             full = False
@@ -336,6 +355,10 @@ def pushd(dir=None):
 
 
 def cd(path, show=True):
+    if is_linux():
+        if path.startswith('~'):
+            path = home() + path[1:]
+
     assert pexist(path), f'{path} not exist'
     if os.path.isfile(path):
         os.chdir(dirname(path))
@@ -412,3 +435,9 @@ def get_clipboard():
 def set_clipboard(_str):
     pyperclip = import_module('pyperclip')
     pyperclip.copy(_str)
+
+
+def container_running(container_name):
+    docker = import_module('docker')
+    client = docker.from_env()
+    return container_name in [c.name for c in client.containers.list(all=False)]
