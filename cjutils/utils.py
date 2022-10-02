@@ -278,13 +278,13 @@ def mv(source, dest, args=''):
     runok(f'mv {args} {source} {dest}')
 
 
-def lns(source, dest):
+def lns(source, dest, safe=True):
     # dest -> source
+    assert pexist(source), f'{source} not exist'
     dest = dest.replace('~', home())
-    if pexist(dest):
+    if pexist(dest) and safe:
         backup(dest)
     source = os.path.realpath(source)
-    assert pexist(source), f'{source} not exist'
     runok(f'ln -s {source} {dest}')
 
 
