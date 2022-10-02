@@ -266,12 +266,15 @@ def get_pip():
 def import_module(mod, mod_name=None):
     if mod_name is None:
         mod_name = mod
-    try:
-        __import__(mod)
-    except ModuleNotFoundError:
-        warn(f'{mod} not found try to install {mod_name}')
-        runok(f'{get_pip()} install {mod_name}')
-    return __import__(mod)
+
+    def _import_module():
+        try:
+            __import__(mod)
+        except ModuleNotFoundError:
+            warn(f'{mod} not found try to install {mod_name}')
+            runok(f'{get_pip()} install {mod_name}')
+        return __import__(mod)
+    return retry(_import_module, interval=1)
 
 
 def clone(url, depth=1, dst_dir='.'):
