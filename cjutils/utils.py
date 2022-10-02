@@ -190,24 +190,27 @@ def sys_run(cmd):
     os.system(cmd)
 
 
-def run(cmd) -> str:
-    info(f'{green("-")} {cmd}')
+def run(cmd, show=True) -> str:
+    if show:
+        info(f'{green("-")} {cmd}')
     code, output = __run(cmd)
     if code != 0:
         warn(code, output)
     return output
 
 
-def runex(cmd) -> tuple:
-    info(f'{green("-")} {cmd}')
+def runex(cmd, show=True) -> tuple:
+    if show:
+        info(f'{green("-")} {cmd}')
     code, output = __run(cmd)
     if code != 0:
         warn(code, output)
     return code, output
 
 
-def runok(cmd) -> tuple:
-    info(f'ensure: {cmd}')
+def runok(cmd, show=True) -> tuple:
+    if show:
+        info(f'ensure: {cmd}')
     code, output = __run(cmd)
     if code != 0:
         err(code, output)
@@ -228,7 +231,9 @@ def home():
 
 
 def me():
-    return os.environ["USER"]
+    if 'USER' in os.environ:
+        return os.environ['USER']
+    return run('whoami', show=False)
 
 
 def check_file(file_name):
