@@ -319,7 +319,7 @@ def backup(source, max_count=5):
     dname = os.path.dirname(source)
     if '.' in basename:
         *backup_basename, _type = basename.split('.')
-        backup_basename = '.'.join(backup_name)
+        backup_basename = '.'.join(backup_basename)
     else:
         backup_basename = basename
         _type = None
