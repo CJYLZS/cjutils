@@ -7,7 +7,7 @@ install:
 remove:
 	python3 -m pip uninstall -y cjutils
 
-upload:
+upload: clean format build
 	twine upload dist/*	
 
 clean:
