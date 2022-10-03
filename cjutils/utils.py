@@ -356,6 +356,7 @@ def sort_by_mtime(files: list):
 def backup(source, max_count=5):
     source = replace_home(source)
     if not pexist(source):
+        err(f'{source} not exist')
         return
     basename = os.path.basename(source)
     dname = os.path.dirname(source)
@@ -450,7 +451,7 @@ def retry(func, times=5, interval=3):
             res = func()
         except Exception as e:
             traceback.print_exc()
-            warn(f'run {func} failed {t} time(s)')
+            warn(f'run {func} failed {t} time(s)\n{e}')
             info(f'wait {interval} second(s)')
             time.sleep(interval)
             continue
