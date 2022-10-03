@@ -315,12 +315,15 @@ def sort_by_mtime(files: list):
 def backup(source, max_count=5):
     if not pexist(source):
         return
-    *backup_name, _type = source.split('.')
-    if len(backup_name) == 0:
-        backup_name = _type
-        _type = None
+    basename = os.path.basename(source)
+    dname = os.path.dirname(source)
+    if '.' in basename:
+        *backup_basename, _type = basename.split('.')
+        backup_basename = '.'.join(backup_name)
     else:
-        backup_name = '.'.join(backup_name)
+        backup_basename = basename
+        _type = None
+    backup_name = os.path.join(dname, backup_basename)
     backup_files = []
     full = True
     for i in range(1, max_count + 1):
