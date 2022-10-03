@@ -28,6 +28,42 @@ def yellow(str):
     return f'\033[33m{str}\033[0m'
 
 
+def blue(str):
+    return f'\033[34m{str}\033[0m'
+
+
+def purple(str):
+    return f'\033[35m{str}\033[0m'
+
+
+def cyan(str):
+    return f'\033[36m{str}\033[0m'
+
+
+def lred(str):
+    return f'\033[1;31m{str}\033[0m'
+
+
+def lgreen(str):
+    return f'\033[1;32m{str}\033[0m'
+
+
+def lyellow(str):
+    return f'\033[1;33m{str}\033[0m'
+
+
+def lblue(str):
+    return f'\033[1;34m{str}\033[0m'
+
+
+def lpurple(str):
+    return f'\033[1;35m{str}\033[0m'
+
+
+def lcyan(str):
+    return f'\033[1;36m{str}\033[0m'
+
+
 def now(format='%y%m%d-%H:%M:%S'):
     return datetime.strftime(datetime.now(), format)
 
@@ -115,7 +151,7 @@ class ylog:
     def info(self, *args):
         args = [f'{arg}' for arg in args]
         if not self.filename:
-            _str = f'{now()}|{green("INFO")} {" ".join(args)}'
+            _str = f'{now()}|{lgreen("INFO")} {" ".join(args)}'
         else:
             _str = f'{now()}|{"INFO"} {" ".join(args)}'
         if self.lock is not None:
@@ -127,7 +163,7 @@ class ylog:
     def warn(self, *args):
         args = [f'{arg}' for arg in args]
         if not self.filename:
-            _str = f'{now()}|{yellow("WARN")} {" ".join(args)}'
+            _str = f'{now()}|{lyellow("WARN")} {" ".join(args)}'
         else:
             _str = f'{now()}|{"WARN"} {" ".join(args)}'
         if self.lock is not None:
@@ -139,7 +175,7 @@ class ylog:
     def err(self, *args):
         args = [f'{arg}' for arg in args]
         if not self.filename:
-            _str = f'{now()}|{red("ERROR")} {" ".join(args)}'
+            _str = f'{now()}|{lred("ERROR")} {" ".join(args)}'
         else:
             _str = f'{now()}|{"ERROR"} {" ".join(args)}'
         if self.lock is not None:
@@ -179,20 +215,25 @@ def python():
     return runok('which python3')
 
 
+def replace_home(path):
+    return os.path.expanduser(path)
+
+
 def __run(cmd):
     if is_windows():
         cmd = cmd.replace('sudo', '').strip()
     return sp.getstatusoutput(cmd)
 
 
-def sys_run(cmd):
-    info(cmd)
-    os.system(cmd)
+def sys_run(cmd, show=True) -> int:
+    if show:
+        info(f'{lgreen("-")} {cmd}')
+    return os.system(cmd)
 
 
 def run(cmd, show=True) -> str:
     if show:
-        info(f'{green("-")} {cmd}')
+        info(f'{lgreen("-")} {cmd}')
     code, output = __run(cmd)
     if code != 0:
         warn(code, output)
@@ -201,7 +242,7 @@ def run(cmd, show=True) -> str:
 
 def runex(cmd, show=True) -> tuple:
     if show:
-        info(f'{green("-")} {cmd}')
+        info(f'{lyellow("-")} {cmd}')
     code, output = __run(cmd)
     if code != 0:
         warn(code, output)
@@ -210,7 +251,7 @@ def runex(cmd, show=True) -> tuple:
 
 def runok(cmd, show=True) -> tuple:
     if show:
-        info(f'ensure: {cmd}')
+        info(f'{lred("-")} {cmd}')
     code, output = __run(cmd)
     if code != 0:
         err(code, output)
@@ -278,7 +319,7 @@ def import_module(mod, mod_name=None):
 
 
 def clone(url, depth=1, dst_dir='.'):
-    dst_dir = dst_dir.replace('~', home())
+    dst_dir = replace_home(dst_dir)
     if dst_dir != '.' and pexist(dst_dir):
         run(f'rm -rf {dst_dir}')
 
@@ -298,7 +339,7 @@ def mv(source, dest, args=''):
 def lns(source, dest, safe=True):
     # dest -> source
     assert pexist(source), f'{source} not exist'
-    dest = dest.replace('~', home())
+    dest = replace_home(dest)
     if pexist(dest):
         if safe:
             backup(dest)
@@ -313,6 +354,7 @@ def sort_by_mtime(files: list):
 
 
 def backup(source, max_count=5):
+    source = replace_home(source)
     if not pexist(source):
         return
     basename = os.path.basename(source)
@@ -341,7 +383,6 @@ def backup(source, max_count=5):
         rm(backup_files[0])
         backup_name = backup_files[0]
 
-    source = source.replace('~', home())
     if is_windows():
         cmd = 'move'
     else:
