@@ -407,10 +407,7 @@ def pushd(dir=None):
 
 
 def cd(path, show=True):
-    if is_linux():
-        if path.startswith('~'):
-            path = home() + path[1:]
-
+    path = replace_home(path)
     assert pexist(path), f'{path} not exist'
     if os.path.isfile(path):
         os.chdir(dirname(path))
