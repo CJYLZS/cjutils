@@ -10,6 +10,9 @@ import json
 import base64
 import traceback
 import subprocess as sp
+import logging
+logging._levelToName[logging.WARNING] = 'WARN'
+logging._levelToName[logging.CRITICAL] = 'FATAL'
 
 
 if 'dirs' not in __builtins__.keys():
@@ -64,8 +67,59 @@ def lcyan(str):
     return f'\033[1;36m{str}\033[0m'
 
 
-def now(format='%y%m%d-%H:%M:%S'):
-    return datetime.strftime(datetime.now(), format)
+class ColorFormatter(logging.Formatter):
+    def __init__(self, fmt: str = None, datefmt: str = '%y%m%d|%H:%M:%S', style='{', validate: bool = True) -> None:
+        self.fmt = fmt
+        self.datefmt = datefmt
+        self.style = style
+        self.validate = validate
+        self.formats = {
+            logging.DEBUG: f"{lgreen('{levelname: <6}')}{green('{asctime: <16}')}{{message}}",
+            logging.INFO: f"{lgreen('{levelname: <6}')}{green('{asctime: <16}')}{{message}}",
+            logging.WARNING: f"{lyellow('{levelname: <6}')}{yellow('{asctime: <16}')}{{message}}",
+            logging.ERROR: f"{lred('{levelname: <6}')}{red('{asctime: <16}')}{{message}}",
+            logging.CRITICAL: f"{lred('{levelname: <6}')}{red('{asctime: <16}')}{{message}}",
+        }
+
+    def format(self, record):
+        if not self.fmt:
+            log_fmt = self.formats[record.levelno]
+        else:
+            log_fmt = self.fmt
+        formatter = logging.Formatter(
+            log_fmt, style=self.style, datefmt=self.datefmt)
+        return formatter.format(record)
+
+
+class NoColorFormatter(logging.Formatter):
+    """
+    Log formatter that strips terminal colour
+    escape codes from the log message.
+    """
+
+    def __init__(self, fmt: str = None, datefmt: str = None, style='{', validate: bool = True) -> None:
+        self.fmt = fmt
+        self.datefmt = datefmt
+        self.style = style
+        self.validate = validate
+
+    # Regex for ANSI colour codes
+    ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+    def format(self, record):
+        """Return logger message with terminal escapes removed."""
+        record.msg = re.sub(self.ANSI_RE, "", record.msg)
+        return logging.Formatter(fmt=self.fmt, datefmt=self.datefmt, style=self.style, validate=self.validate).format(record)
+
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[]
+)
+_basic_logger = logging.getLogger('yutils_ylog_logger')
+_basic_log_handler = logging.StreamHandler()
+_basic_log_handler.setFormatter(ColorFormatter())
+_basic_logger.addHandler(_basic_log_handler)
 
 
 def create_empty_file(filename):
@@ -97,20 +151,20 @@ if is_linux():
 
 
 class fileLock:
-    def __init__(self, filename=None) -> None:
-        if not filename:
-            self.filename = get_tmp_file()
+    def __init__(self, lockFile=None) -> None:
+        if not lockFile:
+            self.lockFile = get_tmp_file()
         else:
-            self.filename = filename
-            create_empty_file(self.filename)
+            self.lockFile = lockFile
+            create_empty_file(self.lockFile)
         self.__f = None
 
     def __del__(self):
-        rm(self.filename)
+        rm(self.lockFile)
 
     def lock(self):
         assert self.__f is None, 'dead lock'
-        self.__f = open(self.filename, 'r+')
+        self.__f = open(self.lockFile, 'r+')
         fcntl.flock(self.__f.fileno(), fcntl.LOCK_EX)
 
     def unlock(self):
@@ -128,65 +182,115 @@ class fileLock:
 
 
 class ylog:
-    def __init__(self, filename=None, lock=False) -> None:
-        self.filename = filename
-        if self.filename and not os.path.exists(self.filename):
-            create_empty_file(self.filename)
-
-        if lock and sys.platform == 'linux':
-            if filename:
-                self.lock = fileLock(filename=filename + '.lck')
-            else:
-                self.lock = fileLock()
+    def __init__(self, lockFile=None, enableLineno=True, logger=_basic_logger) -> None:
+        if lockFile and sys.platform == 'linux':
+            self.lock = fileLock(lockFile=lockFile)
         else:
             self.lock = None
+        self.__logger = logger
+        self.__enable_lineno = enableLineno
 
-    def __print(self, _str):
-        if self.filename:
-            with open(self.filename, 'a') as f:
-                f.write(_str + '\n')
+    def enable_lineno(self):
+        self.__enable_lineno = True
+
+    def disable_lineno(self):
+        self.__enable_lineno = False
+
+    def __get_frame_str(self, color=lgreen):
+        if not self.__enable_lineno:
+            return ''
+        frame = sys._getframe(2)
+        if frame.f_code.co_filename == os.path.realpath(__file__):
+            frame = frame.f_back
+        return f' {color("<<")} {os.path.realpath(frame.f_code.co_filename)}-{frame.f_lineno}'
+
+    def debug(self, *args):
+        if self.lock is not None:
+            with self.lock:
+                self.__logger.debug(
+                    " ".join([f'{arg}' for arg in args]) + self.__get_frame_str())
         else:
-            print(_str)
+            self.__logger.debug(
+                " ".join([f'{arg}' for arg in args]) + self.__get_frame_str())
 
     def info(self, *args):
-        args = [f'{arg}' for arg in args]
-        if not self.filename:
-            _str = f'{now()}|{lgreen("INFO")} {" ".join(args)}'
-        else:
-            _str = f'{now()}|{"INFO"} {" ".join(args)}'
         if self.lock is not None:
             with self.lock:
-                self.__print(_str)
+                self.__logger.info(" ".join([f'{arg}' for arg in args]))
         else:
-            self.__print(_str)
+            self.__logger.info(" ".join([f'{arg}' for arg in args]))
 
     def warn(self, *args):
-        args = [f'{arg}' for arg in args]
-        if not self.filename:
-            _str = f'{now()}|{lyellow("WARN")} {" ".join(args)}'
-        else:
-            _str = f'{now()}|{"WARN"} {" ".join(args)}'
         if self.lock is not None:
             with self.lock:
-                self.__print(_str)
+                self.__logger.warning(
+                    " ".join([f'{arg}' for arg in args]) + self.__get_frame_str(color=lyellow))
         else:
-            self.__print(_str)
+            self.__logger.warning(
+                " ".join([f'{arg}' for arg in args]) + self.__get_frame_str(color=lyellow))
 
     def err(self, *args):
-        args = [f'{arg}' for arg in args]
-        if not self.filename:
-            _str = f'{now()}|{lred("ERROR")} {" ".join(args)}'
-        else:
-            _str = f'{now()}|{"ERROR"} {" ".join(args)}'
         if self.lock is not None:
             with self.lock:
-                self.__print(_str)
+                self.__logger.error(
+                    " ".join([f'{arg}' for arg in args]) + self.__get_frame_str(color=lred))
         else:
-            self.__print(_str)
+            self.__logger.error(
+                " ".join([f'{arg}' for arg in args]) + self.__get_frame_str(color=lred))
+
+    def fatal(self, *args):
+        if self.lock is not None:
+            with self.lock:
+                self.__logger.critical(
+                    " ".join([f'{arg}' for arg in args]) + self.__get_frame_str(color=lred))
+        else:
+            self.__logger.critical(
+                " ".join([f'{arg}' for arg in args]) + self.__get_frame_str(color=lred))
 
 
 if "logger" not in __builtins__.keys():
     __builtins__["logger"] = ylog()
+
+
+def get_logger(
+        name=None,
+        level=logging.WARNING,
+        filename=None,
+        fmt=None,
+        style="{",
+        datefmt='%y%m%d|%H:%M:%S',
+        useFileLock=False,
+        enableLineno=True,
+        add_new_handler=False):
+    if not name:
+        name = sys._getframe().f_back.f_code.co_filename
+    logger = logging.getLogger(name=name)
+    if len(logger.handlers) > 0 and not add_new_handler:
+        return logger
+    logger.setLevel(level=level)
+    if filename:
+        if not fmt:
+            fmt = '{name} {levelname: <6}{asctime: <8}: {message}'
+        handler = logging.FileHandler(filename=filename)
+        formatter = NoColorFormatter(
+            fmt=fmt, datefmt=datefmt, style=style)
+    else:
+        handler = logging.StreamHandler()
+        formatter = ColorFormatter(
+            fmt=fmt, datefmt=datefmt, style=style)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    if not useFileLock:
+        return ylog(enableLineno=enableLineno, logger=logger)
+    if filename:
+        return ylog(lockFile=filename + '.lck', enableLineno=enableLineno, logger=logger)
+    assert 'CJUTILS_LOCK_FILE' in os.environ.keys(
+    ), 'get logger failed use file or set lock file in env: CJUTILS_LOCK_FILE'
+    return ylog(lockFile=os.environ["CJUTILS_LOCK_FILE"], enableLineno=enableLineno, logger=logger)
+
+
+def debug(*args):
+    __builtins__["logger"].debug(*args)
 
 
 def info(*args):
@@ -199,6 +303,14 @@ def warn(*args):
 
 def err(*args):
     __builtins__["logger"].err(*args)
+
+
+def fatal(*args):
+    __builtins__["logger"].fatal(*args)
+
+
+def now(format='%y%m%d-%H:%M:%S'):
+    return datetime.strftime(datetime.now(), format)
 
 
 def is_windows():
