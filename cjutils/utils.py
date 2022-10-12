@@ -119,6 +119,7 @@ logging.basicConfig(
 _basic_logger = logging.getLogger('yutils_ylog_logger')
 _basic_log_handler = logging.StreamHandler()
 _basic_log_handler.setFormatter(ColorFormatter())
+_basic_logger.handlers = []
 _basic_logger.addHandler(_basic_log_handler)
 
 
@@ -200,9 +201,12 @@ class ylog:
         if not self.__enable_lineno:
             return ''
         frame = sys._getframe(2)
-        if frame.f_code.co_filename == os.path.realpath(__file__):
+        if is_windows():
+            if frame.f_code.co_filename.lower() == os.path.realpath(__file__).lower():
+                frame = frame.f_back
+        elif frame.f_code.co_filename == os.path.realpath(__file__):
             frame = frame.f_back
-        return f' {color("<<")} {os.path.realpath(frame.f_code.co_filename)}-{frame.f_lineno}'
+        return f' {color("<<")} {os.path.realpath(frame.f_code.co_filename)}:{frame.f_lineno}'
 
     def debug(self, *args):
         if self.lock is not None:
@@ -270,8 +274,11 @@ def get_logger(
     logger.setLevel(level=level)
     if filename:
         if not fmt:
-            fmt = '{name} {levelname: <6}{asctime: <8}: {message}'
-        handler = logging.FileHandler(filename=filename)
+            fmt = '{levelname: <6}{asctime: <8}: {message} {name}'
+        _dir = os.path.dirname(filename)
+        if not pexist(_dir):
+            os.makedirs(_dir)
+        handler = logging.FileHandler(filename=filename, encoding='utf-8')
         formatter = NoColorFormatter(
             fmt=fmt, datefmt=datefmt, style=style)
     else:
