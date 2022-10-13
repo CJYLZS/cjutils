@@ -183,19 +183,31 @@ class fileLock:
 
 
 class ylog:
-    def __init__(self, lockFile=None, enableLineno=True, logger=_basic_logger) -> None:
+    def __init__(self, lockFile=None, enableLineno=True, logger=_basic_logger, showFileLevel=3) -> None:
         if lockFile and sys.platform == 'linux':
             self.lock = fileLock(lockFile=lockFile)
         else:
             self.lock = None
         self.__logger = logger
         self.__enable_lineno = enableLineno
+        self.__show_file_level = showFileLevel
 
     def enable_lineno(self):
         self.__enable_lineno = True
 
     def disable_lineno(self):
         self.__enable_lineno = False
+
+    def get_last_name(self, filename, count):
+        res = []
+        for _ in range(count):
+            filename = os.path.split(filename)
+            if filename[1] == '':
+                res.insert(0, filename[0])
+                break
+            res.insert(0, filename[1])
+            filename = filename[0]
+        return os.path.join(*res)
 
     def __get_frame_str(self, color=lgreen):
         if not self.__enable_lineno:
@@ -206,7 +218,9 @@ class ylog:
                 frame = frame.f_back
         elif frame.f_code.co_filename == os.path.realpath(__file__):
             frame = frame.f_back
-        return f' {color("<<")} {os.path.realpath(frame.f_code.co_filename)}:{frame.f_lineno}'
+        filename = self.get_last_name(os.path.realpath(
+            frame.f_code.co_filename), self.__show_file_level)
+        return f' {color("<<")} {filename}:{frame.f_lineno}'
 
     def debug(self, *args):
         if self.lock is not None:
@@ -265,35 +279,49 @@ def get_logger(
         datefmt='%y%m%d|%H:%M:%S',
         useFileLock=False,
         enableLineno=True,
-        add_new_handler=False):
+        resetHandler=False,
+        overwriteDefaultLogger=True,
+        alwaysUseStdOut=True,
+        showFileLevel=3):
     if not name:
-        name = sys._getframe().f_back.f_code.co_filename
+        name = sys._getframe(1).f_code.co_filename
     logger = logging.getLogger(name=name)
-    if len(logger.handlers) > 0 and not add_new_handler:
-        return logger
     logger.setLevel(level=level)
+
+    def add_handler(formatter: logging.Formatter, handler: logging.Handler):
+        if resetHandler:
+            logger.handlers = []
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
     if filename:
-        if not fmt:
-            fmt = '{levelname: <6}{asctime: <8}: {message} {name}'
         _dir = os.path.dirname(filename)
-        if not pexist(_dir):
+        if _dir and not pexist(_dir):
             os.makedirs(_dir)
+        if not fmt:
+            _fmt = '{name} {levelname: <6}{asctime: <8}: {message}'
         handler = logging.FileHandler(filename=filename, encoding='utf-8')
         formatter = NoColorFormatter(
-            fmt=fmt, datefmt=datefmt, style=style)
-    else:
+            fmt=_fmt, datefmt=datefmt, style=style)
+        add_handler(formatter, handler)
+
+    if not filename or alwaysUseStdOut:
         handler = logging.StreamHandler()
         formatter = ColorFormatter(
             fmt=fmt, datefmt=datefmt, style=style)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+        add_handler(formatter, handler)
+
+    def return_ylog(ylog: ylog):
+        if overwriteDefaultLogger:
+            __builtins__["logger"] = ylog
+        return ylog
     if not useFileLock:
-        return ylog(enableLineno=enableLineno, logger=logger)
+        return return_ylog(ylog(enableLineno=enableLineno, logger=logger, showFileLevel=showFileLevel))
     if filename:
-        return ylog(lockFile=filename + '.lck', enableLineno=enableLineno, logger=logger)
+        return return_ylog(ylog(lockFile=filename + '.lck', enableLineno=enableLineno, logger=logger, showFileLevel=showFileLevel))
     assert 'CJUTILS_LOCK_FILE' in os.environ.keys(
     ), 'get logger failed use file or set lock file in env: CJUTILS_LOCK_FILE'
-    return ylog(lockFile=os.environ["CJUTILS_LOCK_FILE"], enableLineno=enableLineno, logger=logger)
+    return return_ylog(ylog(lockFile=os.environ["CJUTILS_LOCK_FILE"], enableLineno=enableLineno, logger=logger, showFileLevel=showFileLevel))
 
 
 def debug(*args):

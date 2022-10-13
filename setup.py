@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 with open('README.rst') as f:
     setup(
         name='cjutils',
-        version='0.0.17',
+        version='0.0.18',
         keywords='cjutils',
         description='cmd framework and utils',
         long_description=f.read(),
