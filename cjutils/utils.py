@@ -124,9 +124,11 @@ def pexist(d):
     return pexists(d)
 
 
-def clone(url, depth=1, dst_dir='.'):
+def clone(url, depth=1, dst_dir='.', reclone=False):
     dst_dir = expanduser(dst_dir)
     if dst_dir != '.' and pexist(dst_dir):
+        if not reclone:
+            return
         run(f'rm -rf {dst_dir}')
 
     def _clone():
