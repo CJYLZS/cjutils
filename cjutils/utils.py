@@ -154,7 +154,7 @@ def sort_by_mtime(files: list):
 def backup(source, max_count=5):
     source = expanduser(source)
     if not pexist(source):
-        err(f'{source} not exist')
+        warn(f'backup: {source} not exist')
         return
     basename = os.path.basename(source)
     dname = os.path.dirname(source)
