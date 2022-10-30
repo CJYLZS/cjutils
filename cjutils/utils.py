@@ -158,22 +158,10 @@ def backup(source, max_count=5):
     if not pexist(source):
         warn(f'backup: {source} not exist')
         return
-    basename = os.path.basename(source)
-    dname = os.path.dirname(source)
-    if '.' in basename:
-        *backup_basename, _type = basename.split('.')
-        backup_basename = '.'.join(backup_basename)
-    else:
-        backup_basename = basename
-        _type = None
-    backup_name = os.path.join(dname, backup_basename)
     backup_files = []
     full = True
     for i in range(1, max_count + 1):
-        if _type is None:
-            new_name = backup_name + f'_{i}'
-        else:
-            new_name = backup_name + f'_{i}.{_type}'
+        new_name = source + f'.{i}'
         if not pexist(new_name):
             backup_name = new_name
             full = False
