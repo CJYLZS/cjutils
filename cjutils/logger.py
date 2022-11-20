@@ -160,7 +160,7 @@ def get_logger(
         useFileLock=False,
         enableLineno=True,
         resetHandler=False,
-        overwriteDefaultLogger=True,
+        overwriteDefaultLogger=False,
         alwaysUseStdOut=True,
         showFileLevel=3):
     if not name:
