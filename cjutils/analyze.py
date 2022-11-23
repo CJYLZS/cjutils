@@ -23,23 +23,25 @@ def analyze(sortby=None, filename=None, stream=None):
         return wrapper
     return decorator
 
+
 def timer(log_func=None):
     def decorator(func):
         def wrapper(*args, **kwargs):
             s = time.time()
             ret = func(*args, **kwargs)
             if callable(log_func):
-                log_func(f'{func} cost {(time.time() - s)*1000: .3}ms')
+                log_func(f'{func} cost {round((time.time() - s)*1000, 3)} ms')
             else:
-                print(f'{func} cost {(time.time() - s): .3}ms')
+                print(f'{func} cost {round((time.time() - s)*1000, 3)} ms')
             return ret
         return wrapper
     return decorator
 
+
 @analyze(sortby='ncalls')
 @timer(log_func=print)
 def test():
-    time.sleep(0.1357)
+    time.sleep(5)
     return 1
 
 

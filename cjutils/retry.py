@@ -9,7 +9,6 @@ logging._levelToName[logging.WARNING] = 'WARN'
 logging._levelToName[logging.CRITICAL] = 'FATAL'
 
 
-
 def retry(func, times=5, interval=3):
     exception = None
     try:
@@ -71,9 +70,11 @@ def Dretry(times=5, interval=3):
 def test():
     logger = get_logger(name='test', level=logging.INFO,
                         overwriteDefaultLogger=False)
+
     def test1():
         # failed 4 times
         i = 0
+
         def failed_func():
             nonlocal i
             while i < 4:
@@ -85,6 +86,7 @@ def test():
     def test2():
         # failed 4 times
         i = 0
+
         @Dretry(5, 0)
         def failed_func():
             nonlocal i
@@ -93,7 +95,7 @@ def test():
                 assert False, 'failed'
             return 1
         assert failed_func() == 1
-    
+
     test1()
     test2()
     logger.info('pass')
