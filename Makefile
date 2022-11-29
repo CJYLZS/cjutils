@@ -16,4 +16,7 @@ clean:
 format:
 	python3 -m cjutools format -Pi
 
-all: clean format build remove install
+test:
+	python3 test/test.py
+
+all: clean format test build remove install
