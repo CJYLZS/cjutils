@@ -14,7 +14,7 @@ def test_argparse_base():
             ('c', 'cc', 'ccccccc', '', False),
             ('d', '', 'ddd', False, False),
             ('e', '--ee', 'eeeeeeeeee', True, False),
-        ], enable_plugin=False, plugin_dir='cmds') -> None:
+        ], enable_plugin=True, plugin_dir='cmdss') -> None:
             super().__init__(opt_argv, enable_plugin, plugin_dir)
 
         def test(self, key, value):
@@ -41,6 +41,9 @@ def test_argparse_base():
     fuck().test('aaa', 'valuea')
     fuck().test('d', True)
     fuck().test('e', False)
+
+    sys.argv = "test my -a valuea --bbb 1 2 3 4 5 -de".split()
+    fuck()
 
     sys.argv = tmp
 
