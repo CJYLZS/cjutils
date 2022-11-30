@@ -109,12 +109,9 @@ class cmd_base(argparse.ArgumentParser):
                     tmp[1] = tmp[1][1:]
                     opt_argv[i] = tuple(tmp)
 
-    def __init__(self, opt_argv=[], enable_plugin=False, plugin_dir='cmds') -> None:
-        super().__init__(prog='argparse base')
-        if enable_plugin:
-            self.plugin_dir = os.path.realpath(plugin_dir)
-            self.add_argument('plugin', default=None,
-                              nargs='?', help=os.path.join(plugin_dir, '<plugin>_ext.py'))
+    def __init__(self, options_argv=[], enable_plugins=False, plugin_dir='cmds', **kwargs) -> None:
+        opt_argv = options_argv
+        super().__init__(prog='argparse_base')
 
         self.__init_argv(opt_argv)
         self.__cast_opt_argv(opt_argv)
@@ -131,9 +128,16 @@ class cmd_base(argparse.ArgumentParser):
                 **self.__get_kwargs_from_pos_args(args)
             )
 
-        self.args = self.parse_args()
-        if getattr(self.args, 'plugin', None):
-            self.__skip_into_plugin(self.args.plugin)
+        if enable_plugins and len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
+            self.plugin_dir = os.path.realpath(plugin_dir)
+            self.add_argument('plugin', default=None,
+                              nargs='?', help=os.path.join(plugin_dir, '<plugin>_ext.py'))
+            self.args = self.parse_args(args=sys.argv[1:2])
+            if getattr(self.args, 'plugin', None):
+                self.__skip_into_plugin(self.args.plugin)
+            assert False, 'impossible'
+        else:
+            self.args = self.parse_args()
 
     def getopt(self, opt):
         return self.get_opt(opt)
@@ -142,11 +146,3 @@ class cmd_base(argparse.ArgumentParser):
         if opt in self.__short_long_map:
             return getattr(self.args, self.__short_long_map[opt], None)
         return getattr(self.args, opt, None)
-
-    def hasopt(self, opt):
-        return self.sys_has_opt(opt)
-
-    def sys_has_opt(self, opt):
-        if opt in self.__short_long_map:
-            return not getattr(self.args, self.__short_long_map[opt], None) == None
-        return not getattr(self.args, opt, None) == None
