@@ -4,7 +4,7 @@ sys.path.append(os.path.realpath(os.path.dirname(__file__)))
 import argparse
 
 
-class argparse_base(argparse.ArgumentParser):
+class cmd_base(argparse.ArgumentParser):
     def __skip_into_plugin(self, plugin):
         if self.plugin_dir not in sys.path:
             sys.path.append(self.plugin_dir)
