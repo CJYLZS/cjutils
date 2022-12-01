@@ -7,14 +7,14 @@ install:
 remove:
 	python3 -m pip uninstall -y cjutils
 
-upload: clean format build
+upload: clean build
 	twine upload dist/*	
 
 clean:
 	rm -rf build cjutils.egg-info dist
 
 format:
-	python3 -m cjutools format -Pi
+	python3 -m cjutools format -iP .
 
 test:
 	python3 test/test.py
