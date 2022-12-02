@@ -47,7 +47,6 @@ class cmd_base(argparse.ArgumentParser):
         res = {}
         res['help'] = args['help']
         default = args['default']
-        res['default'] = default
         if default is False:
             res['action'] = 'store_true'
             return res
@@ -56,10 +55,12 @@ class cmd_base(argparse.ArgumentParser):
             return res
         elif isinstance(default, int) or isinstance(default, str) or isinstance(default, float):
             res['action'] = 'store'
+            res['const'] = default
             res['nargs'] = '?'
             return res
         elif isinstance(default, list):
             res['action'] = 'extend'
+            res['const'] = default
             res['nargs'] = '*'
             return res
         else:
@@ -115,22 +116,24 @@ class cmd_base(argparse.ArgumentParser):
             return __builtins__.get(key, None)
 
         def _get_plugin_description(self) -> str:
-            if not self._get_builtin('enable_plugins'):
+            path = self._get_builtin('plugins_dir')
+            if not path:
                 return ''
             plugins_list = []
-            path = self._get_builtin('plugins_dir')
             if os.path.exists(path):
                 for f in os.scandir(path):
                     if f.name.endswith('_ext.py'):
                         plugins_list.append(f.name[:-7])
             if len(plugins_list) == 0:
                 return ''
-            tmp = "\n\t".join(plugins_list)
-            return f'plugins:\n\t{tmp}\n'
+            tmp = "\n  ".join(plugins_list)
+            return f'\navailable plugins:\n  {tmp}\n'
 
-        def _format_usage(self, *args) -> str:
-            text = super()._format_usage(*args)
-            return text + f'{self._get_plugin_description()}'
+        def format_help(self) -> str:
+            text = super().format_help()
+            flag = '\noptions:'
+            pos = text.find(flag)
+            return ''.join([text[:pos], self._get_plugin_description(), text[pos:]])
 
     def _set_builtin(self, key, value):
         __builtins__[key] = value
@@ -139,18 +142,11 @@ class cmd_base(argparse.ArgumentParser):
         if key in __builtins__:
             del __builtins__[key]
 
-    def __init__(self, options_argv=[], enable_plugins=False, plugins_dir='cmds', prog=None, **kwargs) -> None:
+    def __init__(self, options_argv=[], enable_plugins=False, plugins_dir='cmds', prog=None, description=None, **kwargs) -> None:
         opt_argv = options_argv
-        if enable_plugins:
-            self.plugins_dir = os.path.join(os.path.dirname(
-                os.path.realpath(sys.argv[0])), plugins_dir)
-            self._set_builtin('enable_plugins', str(enable_plugins))
-            self._set_builtin('plugins_dir', self.plugins_dir)
-        else:
-            self._unset_builtin('enable_plugins')
-            self._unset_builtin('plugins_dir')
 
-        super().__init__(prog=prog, formatter_class=self.CustomHelpFormatter)
+        super().__init__(prog=prog, description=description,
+                         formatter_class=self.CustomHelpFormatter)
 
         self.__init_argv(opt_argv)
         self.__cast_opt_argv(opt_argv)
@@ -167,15 +163,20 @@ class cmd_base(argparse.ArgumentParser):
                 **self.__get_kwargs_from_pos_args(args)
             )
 
-        if enable_plugins and len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
+        if enable_plugins:
+            self.plugins_dir = os.path.join(os.path.dirname(
+                os.path.realpath(sys.argv[0])), plugins_dir)
+            self._set_builtin('plugins_dir', self.plugins_dir)
             self.add_argument('plugin', default=None,
-                              nargs='?', help=os.path.join(plugins_dir, '<plugin>_ext.py'))
-            self.args = self.parse_args(args=sys.argv[1:2])
-            if getattr(self.args, 'plugin', None):
-                self.__skip_into_plugin(self.args.plugin)
-            assert False, 'impossible'
+                              nargs='?', help=os.path.join(self.plugins_dir, '<plugin>_ext.py'))
+            if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
+                self.args = self.parse_args(args=sys.argv[1:2])
+                if getattr(self.args, 'plugin', None):
+                    self.__skip_into_plugin(self.args.plugin)
+                assert False, 'impossible'
         else:
-            self.args = self.parse_args()
+            self._unset_builtin('plugins_dir')
+        self.args = self.parse_args()
 
     def getopt(self, opt):
         return self.get_opt(opt)
@@ -184,13 +185,3 @@ class cmd_base(argparse.ArgumentParser):
         if opt in self.__short_long_map:
             return getattr(self.args, self.__short_long_map[opt], None)
         return getattr(self.args, opt, None)
-
-
-if __name__ == '__main__':
-    class cmd(cmd_base):
-        def __init__(self, options_argv=[], enable_plugins=False, plugins_dir='cmds', **kwargs) -> None:
-            super().__init__(options_argv=[
-                ('a', 'aa', 'aaa', False, False),
-            ], enable_plugins=True)
-
-    cmd().print_help()
